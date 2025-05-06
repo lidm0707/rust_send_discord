@@ -1,10 +1,10 @@
-use anyhow::Result;
-use chrono::Local; 
+use anyhow::{anyhow, Result};
+use chrono::{Local, FixedOffset};
 use dotenvy::dotenv;
 use reqwest::Client;
 use std::env;
 use tokio::time::{Duration, sleep};
-use tracing::{error, info, warn, Level}; 
+use tracing::{error, info, warn, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -14,9 +14,13 @@ async fn main() -> Result<()> {
 
     let client = Client::new();
     info!("Application started");
+
+    let bangkok_offset = FixedOffset::east_opt(7 * 3600)
+        .ok_or_else(|| anyhow!("Invalid timezone offset"))?;
+
     loop {
         info!("loop");
-        let time = Local::now().format("%Y-%m-%d %H:%M:%S");
+        let time = Local::now().with_timezone(&bangkok_offset).format("%Y-%m-%d %H:%M:%S");
 
         let payload = serde_json::json!({
             "content": format!("Hello from home at {}", time),
@@ -25,9 +29,9 @@ async fn main() -> Result<()> {
 
         if response.status().is_success() {
             info!("Message sent successfully!");
-        } else if response.status().is_server_error(){
+        } else if response.status().is_server_error() {
             warn!("Server error: {}", response.status());
-        }else {
+        } else {
             error!("Failed to send message: {}", response.status());
         }
         // Sleep for 8 hours
